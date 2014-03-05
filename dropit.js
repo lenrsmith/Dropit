@@ -8,8 +8,16 @@
  */
 
 ;(function($) {
-
     $.fn.dropit = function(method) {
+        var buildOptions = function(o){
+            var str  = '<ul>';
+            for(var i = 0; i < o.length; i++){
+                str += "<li data-id='"+o[i].value+"''>"+o[i].label+"<span class='delete'>X</span></li>";
+            }
+            str += '</ul>';
+
+            return str;
+        }
 
         var methods = {
 
@@ -19,14 +27,50 @@
                     var $el = $(this),
                          el = this,
                          settings = $.fn.dropit.settings;
-                    
-                    // Hide initial submenus     
-                    $el.addClass('dropit')
-                    .find('>'+ settings.triggerParentEl +':has('+ settings.submenuEl +')').addClass('dropit-trigger')
+
+                    // Setup the element
+                    $el.wrap('<ul class="dropit"><li></li></ul>');
+                    $el.attr('autocomplete', 'off');
+                    $ulwrap = $el.closest('ul');
+                    var submenu = buildOptions(settings.source);
+                    $ulwrap.find('>li').append(submenu);
+ 
+                    $ulwrap.find('>li li').hover(function(e){
+                        $(this).addClass('dropit-highlighted');
+                    }, function(e){
+                        $(this).removeClass('dropit-highlighted');
+                    });
+
+                    $ulwrap.find('>li li').click(function(e){
+                        var del = $(this).clone();
+                        del.find('span').remove();
+                        $el.val(del.html());
+                    });
+
+                    $ulwrap.find('>li li span.delete').click(function(e){
+                        e.stopPropagation();
+                        var el = $(this);
+                        $.ajax({
+                            url: settings.remove,
+                            data: {id: $(this).closest('li').attr('data-id')},
+                            dataType: 'json',
+                            type: 'GET'
+                        }).fail(function(xhr, textStatus, errorThrown){
+                            Messenger().post({
+                                message:"There was an error processing your request.\nERROR: "+textStatus,
+                                showCloseButton: true
+                            });
+                        }).done(function(data, textStatus, xhr){
+                            el.closest('li').remove();
+                        });
+                    });
+
+                    // Hide initial submenus
+                    $ulwrap.find('>'+ settings.triggerParentEl +':has('+ settings.submenuEl +')').addClass('dropit-trigger')
                     .find(settings.submenuEl).addClass('dropit-submenu').hide();
                     
                     // Open on click
-                    $el.on(settings.action, settings.triggerParentEl +':has('+ settings.submenuEl +') > '+ settings.triggerEl +'', function(){
+                    $ulwrap.on(settings.action, settings.triggerParentEl +':has('+ settings.submenuEl +') > '+ settings.triggerEl +'', function(){
                         if($(this).parents(settings.triggerParentEl).hasClass('dropit-open')) return false;
                         settings.beforeHide.call(this);
                         $('.dropit-open').removeClass('dropit-open').find('.dropit-submenu').hide();
@@ -47,7 +91,6 @@
                     settings.afterLoad.call(this);
                 });
             }
-            
         }
 
         if (methods[method]) {

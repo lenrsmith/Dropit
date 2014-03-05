@@ -24,5 +24,24 @@
     list-style: none;
 	padding: 0;
 	margin: 0;
+    border: 1px solid #ccc;
+    background-color: white;
+    width: 100%;
 }
 .dropit .dropit-open .dropit-submenu { display: block; }
+.dropit .dropit-submenu li {
+    padding: 5px 0 5px 5px;
+    cursor: pointer;
+}
+.dropit .dropit-submenu .delete {
+    float: right;
+    margin-right: 10px;
+    color: red;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.dropit .dropit-submenu .dropit-highlighted{
+    background:#3875d7;
+    color:#fff
+}
