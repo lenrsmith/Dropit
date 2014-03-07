@@ -17,81 +17,98 @@
             str += '</ul>';
 
             return str;
-        }
+        };
+
+        var updateOptions = function(el, data){
+            var $el = $(el),
+                 settings = $.fn.dropit.settings;
+
+            $ulwrap = $el.closest('ul');
+            var submenu = buildOptions(data);
+            console.log("Dropit::current element: " + JSON.stringify(el, null, 4));
+            console.log("Dropit::submenu: "+submenu);
+            $ulwrap.find('>li>ul').remove();
+            $ulwrap.find('>li').append(submenu);
+
+            $ulwrap.find('>li li').hover(function(e){
+                $(this).addClass('dropit-highlighted');
+            }, function(e){
+                $(this).removeClass('dropit-highlighted');
+            });
+
+            $ulwrap.find('>li li').click(function(e){
+                var del = $(this).clone();
+                del.find('span').remove();
+                $el.val(del.html());
+            });
+
+            $ulwrap.find('>li li span.delete').click(function(e){
+                e.stopPropagation();
+                var el = $(this);
+                $.ajax({
+                    url: settings.remove,
+                    data: {id: $(this).closest('li').attr('data-id')},
+                    dataType: 'json',
+                    type: 'GET'
+                }).fail(function(xhr, textStatus, errorThrown){
+                    Messenger().post({
+                        message:"There was an error processing your request.\nERROR: "+textStatus,
+                        showCloseButton: true
+                    });
+                }).done(function(data, textStatus, xhr){
+                    el.closest('li').remove();
+                });
+            });
+
+            // Hide initial submenus
+            $ulwrap.find('>'+ settings.triggerParentEl +':has('+ settings.submenuEl +')').addClass('dropit-trigger')
+            .find(settings.submenuEl).addClass('dropit-submenu').hide();
+            
+            // Open on click
+            $ulwrap.on(settings.action, settings.triggerParentEl +':has('+ settings.submenuEl +') > '+ settings.triggerEl +'', function(){
+                if($(this).parents(settings.triggerParentEl).hasClass('dropit-open')) return false;
+                settings.beforeHide.call(this);
+                $('.dropit-open').removeClass('dropit-open').find('.dropit-submenu').hide();
+                settings.afterHide.call(this);
+                settings.beforeShow.call(this);
+                $(this).parents(settings.triggerParentEl).addClass('dropit-open').find(settings.submenuEl).show();
+                settings.afterShow.call(this);
+                return false;
+            });
+            
+            // Close if outside click
+            $(document).on('click', function(){
+                settings.beforeHide.call(this);
+                $('.dropit-open').removeClass('dropit-open').find('.dropit-submenu').hide();
+                settings.afterHide.call(this);
+            });
+            
+            settings.afterLoad.call(this);
+        };
 
         var methods = {
 
             init : function(options) {
                 this.dropit.settings = $.extend({}, this.dropit.defaults, options);
+                var el = this,
+                    $el = $(el),
+                    settings = $.fn.dropit.settings;
                 return this.each(function() {
-                    var $el = $(this),
-                         el = this,
-                         settings = $.fn.dropit.settings;
-
                     // Setup the element
                     $el.wrap('<ul class="dropit"><li></li></ul>');
                     $el.attr('autocomplete', 'off');
-                    $ulwrap = $el.closest('ul');
-                    var submenu = buildOptions(settings.source);
-                    $ulwrap.find('>li').append(submenu);
- 
-                    $ulwrap.find('>li li').hover(function(e){
-                        $(this).addClass('dropit-highlighted');
-                    }, function(e){
-                        $(this).removeClass('dropit-highlighted');
-                    });
+                    updateOptions(el, settings.source);
+                });
+            },
 
-                    $ulwrap.find('>li li').click(function(e){
-                        var del = $(this).clone();
-                        del.find('span').remove();
-                        $el.val(del.html());
-                    });
-
-                    $ulwrap.find('>li li span.delete').click(function(e){
-                        e.stopPropagation();
-                        var el = $(this);
-                        $.ajax({
-                            url: settings.remove,
-                            data: {id: $(this).closest('li').attr('data-id')},
-                            dataType: 'json',
-                            type: 'GET'
-                        }).fail(function(xhr, textStatus, errorThrown){
-                            Messenger().post({
-                                message:"There was an error processing your request.\nERROR: "+textStatus,
-                                showCloseButton: true
-                            });
-                        }).done(function(data, textStatus, xhr){
-                            el.closest('li').remove();
-                        });
-                    });
-
-                    // Hide initial submenus
-                    $ulwrap.find('>'+ settings.triggerParentEl +':has('+ settings.submenuEl +')').addClass('dropit-trigger')
-                    .find(settings.submenuEl).addClass('dropit-submenu').hide();
-                    
-                    // Open on click
-                    $ulwrap.on(settings.action, settings.triggerParentEl +':has('+ settings.submenuEl +') > '+ settings.triggerEl +'', function(){
-                        if($(this).parents(settings.triggerParentEl).hasClass('dropit-open')) return false;
-                        settings.beforeHide.call(this);
-                        $('.dropit-open').removeClass('dropit-open').find('.dropit-submenu').hide();
-                        settings.afterHide.call(this);
-                        settings.beforeShow.call(this);
-                        $(this).parents(settings.triggerParentEl).addClass('dropit-open').find(settings.submenuEl).show();
-                        settings.afterShow.call(this);
-                        return false;
-                    });
-                    
-                    // Close if outside click
-                    $(document).on('click', function(){
-                        settings.beforeHide.call(this);
-                        $('.dropit-open').removeClass('dropit-open').find('.dropit-submenu').hide();
-                        settings.afterHide.call(this);
-                    });
-                    
-                    settings.afterLoad.call(this);
+            update : function(data) {
+                var el = this,
+                    settings = $.fn.dropit.settings;
+                return this.each(function(){
+                    updateOptions(el, data);
                 });
             }
-        }
+        };
 
         if (methods[method]) {
             return methods[method].apply(this, Array.prototype.slice.call(arguments, 1));
@@ -101,7 +118,7 @@
             $.error( 'Method "' +  method + '" does not exist in dropit plugin!');
         }
 
-    }
+    };
 
     $.fn.dropit.defaults = {
         action: 'click', // The open action for the trigger
@@ -113,8 +130,8 @@
         afterShow: function(){}, // Triggers after submenu is shown
         beforeHide: function(){}, // Triggers before submenu is hidden
         afterHide: function(){} // Triggers before submenu is hidden
-    }
+    };
 
-    $.fn.dropit.settings = {}
+    $.fn.dropit.settings = {};
 
 })(jQuery);
