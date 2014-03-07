@@ -25,8 +25,6 @@
 
             $ulwrap = $el.closest('ul');
             var submenu = buildOptions(data);
-            console.log("Dropit::current element: " + JSON.stringify(el, null, 4));
-            console.log("Dropit::submenu: "+submenu);
             $ulwrap.find('>li>ul').remove();
             $ulwrap.find('>li').append(submenu);
 
