@@ -54,7 +54,11 @@
                         showCloseButton: true
                     });
                 }).done(function(data, textStatus, xhr){
-                    el.closest('li').remove();
+                    if(data.response === 0){
+                        alert(data.message);
+                    } else if(data.response == 1) {
+                        el.closest('li').remove();
+                    }
                 });
             });
 
