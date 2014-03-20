@@ -10,9 +10,15 @@
 ;(function($) {
     $.fn.dropit = function(method) {
         var buildOptions = function(o){
-            var str  = '<ul>';
+            var str  = '<ul>',
+                settings = $.fn.dropit.settings;
             for(var i = 0; i < o.length; i++){
-                str += "<li data-id='"+o[i].value+"''>"+o[i].label+"<span class='delete'>X</span></li>";
+                str += "<li data-id='"+o[i].value+"''>"+o[i].label;
+                if(settings.remove === ""){
+                    str+="</li>";
+                } else {
+                    str+="<span class='delete'>X</span></li>";
+                }
             }
             str += '</ul>';
 
@@ -99,7 +105,22 @@
                     // Setup the element
                     $el.wrap('<ul class="dropit"><li></li></ul>');
                     $el.attr('autocomplete', 'off');
-                    updateOptions(el, settings.source);
+                    if(settings.source_type.toLowerCase() == 'array' ){
+                        updateOptions(el, settings.source);
+                    } else if(settings.source_type.toLowerCase() == 'ajax') {
+                        $.ajax({
+                            url: settings.source,
+                            dataType: 'json',
+                            type: 'GET'
+                        }).fail(function(xhr, textStatus, errorThrown){
+                            Messenger().post({
+                                message:"There was an error processing your request.\nERROR: "+textStatus,
+                                showCloseButton: true
+                            });
+                        }).done(function(data, textStatus, xhr){
+                            updateOptions(el, data);
+                        });
+                    }
                 });
             },
 
